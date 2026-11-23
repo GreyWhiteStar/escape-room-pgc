@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Robo de la Contabilidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+/* Idea: un libro diario sobre un escritorio oscuro. Papel verde de libro mayor, margen rojo doble, sello rojo y latón para las claves. */
+:root{
+  --desk:#16231d; --desk-2:#0e1813; --paper:#ecf1e3; --paper-2:#dfe8d3; --card:#f8faf2; --rule:#a4bda6;
+  --ink:#14221a; --ink-soft:#435749; --stamp:#b3261e; --brass:#8f6d22; --brass-lt:#f0d98a; --ok:#1d6a44;
+  --f-display:'Special Elite','Courier New',monospace;
+  --f-body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.55;min-height:100%}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0 0 .5em;text-wrap:balance;line-height:1.2}
+h1{font-size:2.3rem}
+h2{font-size:1.6rem}
+h3{font-size:1.2rem}
+p{margin:0 0 1em}
+.mono{font-family:var(--f-mono)}
+
+/* barra superior */
+.bar{position:sticky;top:0;z-index:5;background:var(--desk-2);color:#d9e4d0;border-bottom:2px solid var(--brass)}
+.bar-in{max-width:960px;margin:0 auto;padding:10px 16px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.brand{font-family:var(--f-display);letter-spacing:.03em;line-height:1.2}
+.brand small{display:block;font-family:var(--f-mono);font-size:.68rem;color:#9db3a2;letter-spacing:.1em;text-transform:uppercase}
+.meters{display:flex;gap:20px;font-family:var(--f-mono);font-size:.82rem;color:#9db3a2}
+.meters b{color:var(--brass-lt);font-weight:600;font-variant-numeric:tabular-nums}
+.meters .late b{color:#ff9a8f}
+
+/* sobres */
+.track{max-width:960px;margin:16px auto 0;padding:0 16px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.slot{background:var(--desk-2);border:1px solid #2d4338;border-top:3px solid #2d4338;color:#8fa596;padding:8px 4px;text-align:center;font-family:var(--f-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;border-radius:3px;font-weight:400}
+.slot b{display:block;font-family:var(--f-display);font-weight:400;font-size:1.7rem;color:var(--brass-lt);letter-spacing:0;line-height:1.25;text-transform:none}
+.slot.cur{border-top-color:var(--brass);color:var(--brass-lt)}
+.slot.done{border-top-color:#4a9a72}
+button.slot{cursor:pointer}
+button.slot:focus-visible{outline:3px solid var(--brass-lt);outline-offset:2px}
+
+/* hoja */
+.wrap{max-width:960px;margin:16px auto 64px;padding:0 16px}
+.sheet{position:relative;background:var(--paper);border-radius:3px;padding:30px 30px 34px 86px;box-shadow:0 14px 30px #0008}
+.sheet::before,.sheet::after{content:"";position:absolute;top:0;bottom:0;width:2px;background:var(--stamp);opacity:.5}
+.sheet::before{left:56px}
+.sheet::after{left:62px}
+.eyebrow{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 10px}
+.stamp{display:inline-block;font-family:var(--f-display);color:var(--stamp);border:3px double var(--stamp);padding:2px 12px;text-transform:uppercase;letter-spacing:.14em;font-size:.95rem;transform:rotate(-3deg);margin:0 0 16px;opacity:.9}
+.stamp.green{color:var(--ok);border-color:var(--ok)}
+.lead{font-size:1.1rem}
+ul.rules{padding-left:1.1em;margin:0 0 1.4em}
+ul.rules li{margin-bottom:.35em}
+
+/* material */
+.note{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--brass);padding:12px 16px;margin:0 0 12px;box-shadow:0 2px 0 #0001}
+.note .tag{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);display:block;margin-bottom:4px}
+.row{display:grid;grid-template-columns:1fr minmax(190px,260px);gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule)}
+.row:last-of-type{border-bottom:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;padding:0;list-style:none}
+.chips li{font-family:var(--f-mono);font-size:.78rem;border:1px solid var(--ink-soft);padding:2px 8px;border-radius:2px;background:var(--card)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.98rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+th{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.tot td{border-top:2px solid var(--ink);border-bottom:0;font-weight:700}
+.invoice{background:var(--card);border:1px solid var(--ink-soft);padding:16px 18px;margin:0 0 16px;position:relative}
+.invoice .head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--f-mono);font-size:.8rem;margin-bottom:10px}
+.invoice .alt{color:var(--stamp);font-weight:700}
+
+/* formularios */
+label,.lbl{font-weight:600}
+select,input[type=text]{font:inherit;color:var(--ink);background:#fbfcf6;border:1.5px solid var(--ink-soft);border-radius:3px;padding:.45rem .6rem;width:100%}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:4px 0}
+.opt input{margin-top:.45em;accent-color:var(--ink)}
+fieldset{border:0;padding:0;margin:0 0 14px}
+legend{font-weight:600;padding:0;margin-bottom:4px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{font:inherit;font-weight:600;background:var(--ink);color:var(--paper);border:2px solid var(--ink);padding:.6rem 1.2rem;border-radius:3px;cursor:pointer}
+.btn:hover{background:#25402f}
+.btn.alt{background:transparent;color:var(--ink)}
+.btn.alt:hover{background:var(--paper-2)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.fb{min-height:1.5em;margin-top:12px;font-weight:600}
+.fb.bad{color:var(--stamp)}
+.fb.ok{color:var(--ok)}
+.hints{margin-top:14px}
+.hint{border-left:4px solid var(--brass);background:#f3ecd2;padding:8px 12px;margin-top:8px;font-size:.98rem}
+.hint b{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);display:block}
+
+/* sobre abierto */
+.reveal{display:flex;gap:18px;align-items:flex-start;border:2px solid var(--ok);background:#e4f0e2;padding:16px 18px;margin-top:8px}
+.digit{flex:none;width:76px;height:76px;border-radius:50%;background:var(--ink);color:var(--brass-lt);font-family:var(--f-display);font-size:2.8rem;display:grid;place-items:center;border:3px solid var(--brass)}
+.reveal p{margin-bottom:.7em}
+
+/* caja fuerte */
+.code{display:flex;gap:10px;margin:14px 0 4px}
+.code input{width:3.3ch;min-width:54px;text-align:center;font-family:var(--f-display);font-size:2.2rem;padding:.2rem 0;background:var(--desk-2);color:var(--brass-lt);border:3px solid var(--brass);border-radius:4px}
+.recap{padding-left:1.1em;margin:0 0 1em}
+.recap li{margin-bottom:.4em}
+.stats{display:flex;gap:28px;flex-wrap:wrap;font-family:var(--f-mono);margin:12px 0 18px}
+.stats b{display:block;font-size:1.5rem;font-family:var(--f-display);font-weight:400}
+
+.host{position:fixed;left:0;right:0;bottom:0;background:#000d;color:#d9e4d0;padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:var(--f-mono);font-size:.78rem;z-index:9}
+.host button{font:inherit;background:#26382f;color:#e8f0e0;border:1px solid #4a6355;padding:3px 9px;border-radius:3px;cursor:pointer}
+[hidden]{display:none!important}
+
+@media (max-width:640px){
+  body{font-size:17px}
+  h1{font-size:1.8rem}
+  .sheet{padding:22px 16px 26px 42px}
+  .sheet::before{left:22px}
+  .sheet::after{left:27px}
+  .row{grid-template-columns:1fr}
+  .reveal{flex-direction:column}
+  .slot{font-size:.58rem}
+}
+@media (prefers-reduced-motion:no-preference){
+  .sheet{animation:in .35s ease-out}
+  @keyframes in{from{opacity:.0;transform:translateY(6px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<header class="bar"><div class="bar-in">
+  <div class="brand">Ortiz &amp; Vega, SA<small>Expediente de auditoría</small></div>
+  <div class="meters" aria-live="off">
+    <span id="timewrap">Tiempo <b id="time">30:00</b></span>
+    <span>Pistas <b id="hintcount">0</b></span>
+  </div>
+</div></header>
+<nav class="track" id="track" aria-label="Sobres" hidden></nav>
+<main class="wrap" id="app"></main>
+<div class="host" id="host" hidden></div>
+
+<script>
+const KEYS=[2,8,3,6,2], CODE=KEYS.join(''), TOTAL=30*60;
+const NAMES=['Marco conceptual','Normas de registro y valoración','Cuentas anuales','Cuadro de cuentas','Definiciones y relaciones contables'];
+const PRINC=['Empresa en funcionamiento','Devengo','Uniformidad','Prudencia','No compensación','Importancia relativa'];
+const HINTS=[
+ ['Cada tarjeta responde a un principio distinto. Fíjate en cuándo se registra cada hecho y en la cuantía que tiene.',
+  'A: el importe es tan pequeño que no altera la imagen fiel. B: el gasto se registra cuando ocurre, no cuando se paga. C: Activo y Pasivo no se restan entre sí.'],
+ ['El descuento comercial se calcula sobre el precio de compra y se resta de él.',
+  'Precio de adquisición = precio de compra − descuento comercial + gastos directamente relacionados con la adquisición (transporte, seguros y montaje).'],
+ ['Cuenta, en cada ejercicio, cuántas de las tres circunstancias se cumplen. Hacen falta al menos dos, en dos ejercicios seguidos.',
+  'Límites: activo ≤ 4.000.000 €, cifra anual de negocios ≤ 8.000.000 € y trabajadores ≤ 50. En el PGC de Pymes, el estado de cambios en el patrimonio neto y el estado de flujos de efectivo no son obligatorios.'],
+ ['El grupo 4 recoge operaciones comerciales con clientes, proveedores y Administraciones Públicas. El grupo 5, las operaciones no comerciales a corto plazo y la tesorería.',
+  'Grupos: 1 Financiación básica, 2 Activo no corriente, 3 Existencias, 4 Acreedores y deudores por operaciones comerciales, 5 Cuentas financieras, 6 Compras y gastos, 7 Ventas e ingresos. En una cuenta de tres cifras, la primera es el grupo y las dos primeras, el subgrupo.'],
+ ['El asiento debe cuadrar: la suma del Debe es igual a la suma del Haber.',
+  'Aumenta un activo: Debe. Disminuye un activo (sale dinero del banco): Haber. Aumenta una deuda: Haber.']
+];
+const STORY=[
+ 'El administrador, Don Ernesto Vega, apuntó tres sucesos en tarjetas antes de desaparecer. Cada uno responde a un principio contable distinto. Identifícalos.',
+ 'Entre los papeles hay la factura de una máquina. Alguien ha manipulado el total. Calcula el precio de adquisición que debe figurar en el Balance.',
+ 'Hacienda quiere saber qué cuentas anuales debe presentar la empresa. Estos son los datos de los dos últimos ejercicios.',
+ 'El archivador de Vega tiene siete cajones, uno por cada grupo del cuadro de cuentas, y los papeles están mezclados. Devuelve cada uno a su cajón.',
+ 'Queda un asiento a medias en el libro diario. Completa la partida doble antes de que llegue la inspección.'
+];
+const REVEAL=[
+ 'A es importancia relativa (6), B es devengo (2) y C es no compensación (5). La cifra del sobre es el número del principio del caso B: devengo, el 2.',
+ 'Precio de adquisición = 7.500 − 300 (4 % de descuento) + 500 + 300 = 8.000 €. La cifra del sobre son los miles de euros: 8.',
+ 'Puede aplicar el PGC de Pymes: cumple al menos dos de las tres circunstancias en los dos ejercicios. Los documentos obligatorios son Balance, Cuenta de Pérdidas y Ganancias y Memoria: tres. La cifra es 3.',
+ 'Compras de mercaderías pertenece al grupo 6 (Compras y gastos). La cuenta 217 es el grupo 2, subgrupo 21. La cifra del sobre es el 6.',
+ 'Mobiliario al Debe (aumenta un activo), Bancos al Haber (disminuye un activo) y Proveedores de inmovilizado al Haber (aumenta una deuda). Faltaban 2.000 € para cuadrar: la cifra es 2.'
+];
+
+let S={screen:'intro',solved:[false,false,false,false,false],hints:[0,0,0,0,0],start:null,end:null,tries:0};
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const app=$('#app'), trackEl=$('#track');
+
+function parseNum(s){
+  s=String(s).toLowerCase().replace(/euros?|€|\s/g,'');
+  if(!s) return NaN;
+  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,'');
+  return /^\d+(\.\d+)?$/.test(s)?parseFloat(s):NaN;
+}
+function fmt(sec){const m=Math.floor(sec/60),s=sec%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function nextIdx(){const i=S.solved.indexOf(false);return i<0?5:i}
+
+/* ---------- vistas ---------- */
+function vIntro(){return `<section class="sheet">
+  <div class="stamp">Urgente · Confidencial</div>
+  <h1>El Robo de la Contabilidad</h1>
+  <p class="lead">Son las 22:40. Mañana a las 9:00 llega la inspección de Hacienda a <b>Ortiz &amp; Vega, SA</b>, y esta tarde alguien se ha llevado los libros contables del despacho. Solo queda la caja fuerte del administrador, con la copia de seguridad dentro.</p>
+  <p>Don Ernesto Vega dejó cinco sobres sellados, uno por cada parte del Plan General de Contabilidad. Cada sobre guarda una cifra de la clave. Sois la agencia de auditoría contratada: resolved las cinco pruebas, reunid la clave y abrid la caja antes de que amanezca.</p>
+  <ul class="rules">
+    <li>Los sobres se abren en orden. Cada respuesta correcta revela una cifra.</li>
+    <li>Podéis pedir hasta dos pistas por sobre. El anfitrión las cuenta.</li>
+    <li>Tenéis 30 minutos. Si se acaban, podéis seguir, pero Hacienda ya habrá llegado.</li>
+  </ul>
+  <div class="btns"><button class="btn" id="go">Abrir el expediente</button></div>
+</section>`}
+
+const MATERIAL=[
+ ()=>`<ul class="chips" aria-label="Principios contables">${PRINC.map((p,i)=>`<li>${i+1} · ${p}</li>`).join('')}</ul>
+  <div class="note"><span class="tag">Tarjeta A</span>Una empresa pierde un bolígrafo valorado en 0,50 € y decide no registrar la pérdida en la contabilidad.</div>
+  <div class="note"><span class="tag">Tarjeta B</span>El consumo de electricidad de diciembre se factura y se paga en enero, pero la empresa registra el gasto en el ejercicio de diciembre.</div>
+  <div class="note"><span class="tag">Tarjeta C</span>Una empresa debe 5.000 € a un proveedor y tiene 3.000 € en el banco. En el Balance muestra cada importe por separado y no resta uno del otro.</div>`,
+ ()=>`<div class="invoice"><div class="head"><span>FACTURA Nº 0317 · Maquinaria Sierra Norte, SL</span><span>Cliente: Ortiz &amp; Vega, SA</span></div>
+  <div class="scroll"><table><thead><tr><th>Concepto</th><th class="n">Importe</th></tr></thead><tbody>
+   <tr><td>Troqueladora industrial TX-40</td><td class="n">7.500,00 €</td></tr>
+   <tr><td>Descuento comercial 4 % sobre 7.500,00 €</td><td class="n">pendiente</td></tr>
+   <tr><td>Transporte y seguros</td><td class="n">500,00 €</td></tr>
+   <tr><td>Montaje y puesta en marcha</td><td class="n">300,00 €</td></tr>
+   <tr class="tot"><td>TOTAL FACTURA (importes sin IVA)</td><td class="n alt">8.300,00 €</td></tr></tbody></table></div>
+  <p class="mono" style="font-size:.8rem;margin:10px 0 0">Forma de pago: transferencia a 30 días.</p></div>`,
+ ()=>`<div class="scroll"><table><thead><tr><th>Ejercicio</th><th class="n">Total activo</th><th class="n">Cifra anual de negocios</th><th class="n">Nº medio de trabajadores</th></tr></thead><tbody>
+   <tr><td>20X0</td><td class="n">3.600.000 €</td><td class="n">7.900.000 €</td><td class="n">46</td></tr>
+   <tr><td>20X1</td><td class="n">4.300.000 €</td><td class="n">7.800.000 €</td><td class="n">49</td></tr></tbody></table></div>`,
+ ()=>`<div class="note"><span class="tag">Cuenta 217</span>Equipos para procesos de información.</div>`,
+ ()=>`<div class="note"><span class="tag">Hecho</span>Se compra mobiliario por 3.000 € (sin IVA). Se pagan 1.000 € por banco y el resto queda pendiente de pago al proveedor.</div>`
+];
+
+const FORMS=[
+ ()=>['A','B','C'].map((l,i)=>`<div class="row"><label for="p1-${i}">Tarjeta ${l}: ¿qué principio se aplica?</label><select id="p1-${i}"><option value="">Elige un principio</option>${PRINC.map((p,k)=>`<option value="${k+1}">${k+1} · ${p}</option>`).join('')}</select></div>`).join(''),
+ ()=>`<div class="row"><label for="p2">Precio de adquisición correcto, en euros</label><input type="text" id="p2" inputmode="decimal" autocomplete="off" placeholder="Por ejemplo, 1.234,50"></div>`,
+ ()=>`<fieldset><legend>¿Puede la empresa aplicar el PGC de Pymes?</legend>
+   <label class="opt"><input type="radio" name="pyme" value="si"> Sí</label>
+   <label class="opt"><input type="radio" name="pyme" value="no"> No</label></fieldset>
+  <fieldset><legend>Si lo aplica, ¿qué documentos de las cuentas anuales son obligatorios? Marca todos los que correspondan.</legend>
+   ${[['balance','Balance'],['pyg','Cuenta de Pérdidas y Ganancias'],['ecpn','Estado de cambios en el patrimonio neto'],['efe','Estado de flujos de efectivo'],['memoria','Memoria']].map(([v,t])=>`<label class="opt"><input type="checkbox" name="doc" value="${v}"> ${t}</label>`).join('')}</fieldset>`,
+ ()=>{const it=[['Ventas de mercaderías',7],['Préstamo bancario a 5 años',1],['Dinero en la cuenta del banco',5],['Mercaderías en el almacén',3],['Ordenador de la oficina',2],['Compras de mercaderías',6],['Factura que un cliente todavía no ha pagado',4]];
+   return it.map(([t,g],i)=>`<div class="row"><label for="p4-${i}">${t}</label><select id="p4-${i}" data-exp="${g}"><option value="">Grupo</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">Grupo ${n}</option>`).join('')}</select></div>`).join('')
+   +`<div class="row"><label for="p4s">Cuenta 217: ¿cuál es su subgrupo (dos cifras)?</label><input type="text" id="p4s" inputmode="numeric" maxlength="3" autocomplete="off"></div>`},
+ ()=>{const side=(id)=>`<select id="${id}"><option value="">Se anota en</option><option value="debe">Debe</option><option value="haber">Haber</option></select>`;
+   return `<div class="scroll"><table><thead><tr><th>Cuenta</th><th class="n">Importe</th><th>Anotación</th></tr></thead><tbody>
+    <tr><td>Mobiliario</td><td class="n">3.000,00 €</td><td>${side('p5a')}</td></tr>
+    <tr><td>Bancos</td><td class="n">1.000,00 €</td><td>${side('p5b')}</td></tr>
+    <tr><td>Proveedores de inmovilizado</td><td class="n"><input type="text" id="p5m" inputmode="decimal" autocomplete="off" placeholder="Importe" aria-label="Importe de Proveedores de inmovilizado"></td><td>${side('p5c')}</td></tr></tbody></table></div>`}
+];
+
+function vPrueba(i){
+  const solved=S.solved[i];
+  const used=S.hints[i];
+  let body;
+  if(solved){
+    body=`<div class="reveal"><div class="digit" aria-label="Cifra ${KEYS[i]}">${KEYS[i]}</div><div><h3>Sobre ${i+1} abierto</h3><p>${REVEAL[i]}</p><button class="btn" id="next">${i<4?'Abrir el sobre '+(i+2):'Ir a la caja fuerte'}</button></div></div>`;
+  }else{
+    body=`<form id="form" novalidate>${FORMS[i]()}
+      <div class="btns"><button class="btn" type="submit">Comprobar</button>
+      <button class="btn alt" type="button" id="hint" ${used>=2?'disabled':''}>Pedir pista (${used}/2)</button></div>
+      <div class="fb" id="fb" role="status" aria-live="polite"></div></form>
+      <div class="hints" id="hints">${HINTS[i].slice(0,used).map((h,k)=>`<div class="hint"><b>Pista ${k+1}</b>${h}</div>`).join('')}</div>`;
+  }
+  return `<section class="sheet"><p class="eyebrow">Sobre ${i+1} de 5 · ${NAMES[i]}</p><h2>${STORY[i]}</h2>${MATERIAL[i]()}${body}</section>`;
+}
+
+function vFinal(){return `<section class="sheet">
+  <p class="eyebrow">Reto final · La caja fuerte</p>
+  <h2>Cinco cifras, cinco partes del Plan</h2>
+  <p>La caja se abre con una combinación de cinco cifras. Vega anotó en la tapa: «Las cifras siguen el orden de las partes del Plan General de Contabilidad». Escribid la clave con las cifras de vuestros sobres.</p>
+  <form id="form" novalidate>
+   <div class="code" role="group" aria-label="Combinación">${[0,1,2,3,4].map(i=>`<input type="text" inputmode="numeric" maxlength="1" id="c${i}" aria-label="Cifra ${i+1}" autocomplete="off">`).join('')}</div>
+   <div class="btns"><button class="btn" type="submit">Abrir la caja fuerte</button></div>
+   <div class="fb" id="fb" role="status" aria-live="polite"></div>
+  </form></section>`}
+
+function vWin(){
+  const el=Math.min(S.end-S.start,99*60*1000), sec=Math.floor(el/1000), hs=S.hints.reduce((a,b)=>a+b,0);
+  return `<section class="sheet">
+  <div class="stamp green">Auditoría superada</div>
+  <h1>Libros recuperados</h1>
+  <p class="lead">La caja se abre y los libros están dentro. Hacienda llegará mañana y la contabilidad estará en orden.</p>
+  <div class="stats"><span>Tiempo<b>${fmt(sec)}</b></span><span>Pistas usadas<b>${hs}</b></span></div>
+  <h3>Lo que habéis aplicado</h3>
+  <ol class="recap">
+   <li>Marco conceptual: principios de devengo, importancia relativa y no compensación.</li>
+   <li>Normas de registro y valoración: precio de adquisición de un activo.</li>
+   <li>Cuentas anuales: documentos obligatorios y límites del PGC de Pymes.</li>
+   <li>Cuadro de cuentas: grupos, subgrupos y codificación.</li>
+   <li>Definiciones y relaciones contables: Debe y Haber en la partida doble.</li>
+  </ol>
+  <p>Avisad al anfitrión para anotar vuestro resultado.</p></section>`;
+}
+
+/* ---------- lógica ---------- */
+function setFb(msg,ok){const f=$('#fb');if(!f)return;f.textContent=msg;f.className='fb '+(ok?'ok':'bad')}
+
+function check(i){
+  const miss='Responde a todas las preguntas antes de comprobar.';
+  if(i===0){
+    const v=[0,1,2].map(k=>$('#p1-'+k).value);
+    if(v.some(x=>!x)) return setFb(miss);
+    const ok=v.filter((x,k)=>+x===[6,2,5][k]).length;
+    return ok===3?solve(i):setFb(`${ok} de 3 correctas. Revisa las demás.`);
+  }
+  if(i===1){
+    const n=parseNum($('#p2').value);
+    if(isNaN(n)) return setFb('Escribe un importe en euros.');
+    return Math.abs(n-8000)<0.005?solve(i):setFb('Ese importe no cuadra con el precio de adquisición. Revisa el descuento y los gastos.');
+  }
+  if(i===2){
+    const r=$('input[name=pyme]:checked'); const docs=$$('input[name=doc]:checked').map(x=>x.value).sort().join(',');
+    if(!r||!docs) return setFb(miss);
+    const ok=(r.value==='si'?1:0)+(docs==='balance,memoria,pyg'?1:0);
+    return ok===2?solve(i):setFb(`${ok} de 2 correctas. Revisa las demás.`);
+  }
+  if(i===3){
+    const sel=$$('select[data-exp]'); const s=$('#p4s').value.trim();
+    if(sel.some(x=>!x.value)||!s) return setFb(miss);
+    const ok=sel.filter(x=>x.value===x.dataset.exp).length+(s==='21'?1:0);
+    return ok===8?solve(i):setFb(`${ok} de 8 correctas. Revisa las demás.`);
+  }
+  if(i===4){
+    const a=$('#p5a').value,b=$('#p5b').value,c=$('#p5c').value,m=parseNum($('#p5m').value);
+    if(!a||!b||!c||isNaN(m)) return setFb(miss);
+    const ok=(a==='debe'?1:0)+(b==='haber'?1:0)+(c==='haber'?1:0)+(Math.abs(m-2000)<0.005?1:0);
+    return ok===4?solve(i):setFb(`${ok} de 4 correctas. Revisa las demás.`);
+  }
+}
+function solve(i){S.solved[i]=true;render();window.scrollTo({top:0})}
+
+function showHint(i){
+  if(S.hints[i]>=2)return;
+  S.hints[i]++;
+  $('#hints').innerHTML=HINTS[i].slice(0,S.hints[i]).map((h,k)=>`<div class="hint"><b>Pista ${k+1}</b>${h}</div>`).join('');
+  const b=$('#hint'); b.textContent=`Pedir pista (${S.hints[i]}/2)`; if(S.hints[i]>=2)b.disabled=true;
+  updateMeters();
+}
+
+function bind(){
+  const sc=S.screen;
+  if(sc==='intro'){$('#go').onclick=()=>{S.start=Date.now();S.screen='p1';render();window.scrollTo({top:0})}}
+  else if(sc==='final'){
+    const ins=[0,1,2,3,4].map(i=>$('#c'+i));
+    ins.forEach((el,i)=>{
+      el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'');if(el.value&&ins[i+1])ins[i+1].focus()});
+      el.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!el.value&&ins[i-1])ins[i-1].focus()});
+    });
+    ins[0].focus();
+    $('#form').onsubmit=e=>{e.preventDefault();
+      const v=ins.map(x=>x.value).join('');
+      if(v.length<5) return setFb('Escribe las cinco cifras.');
+      if(v===CODE){S.end=Date.now();S.screen='win';render();window.scrollTo({top:0})}
+      else{S.tries++;setFb(S.tries>=2?'La caja no cede. Comprobad que cada cifra está en el sobre que le corresponde.':'La caja no cede. Revisad las cifras.')}
+    };
+  }
+  else if(sc!=='win'){
+    const i=+sc.slice(1)-1;
+    const f=$('#form'); if(f){f.onsubmit=e=>{e.preventDefault();check(i)}; $('#hint').onclick=()=>showHint(i)}
+    const n=$('#next'); if(n) n.onclick=()=>{S.screen=i<4?'p'+(i+2):'final';render();window.scrollTo({top:0})};
+  }
+}
+
+function renderTrack(){
+  const cur=nextIdx();
+  trackEl.innerHTML=[0,1,2,3,4].map(i=>{
+    const done=S.solved[i], isCur=i===cur&&S.screen!=='win'&&S.screen!=='final';
+    const cls='slot'+(done?' done':'')+(isCur?' cur':'');
+    const inner=`Sobre ${i+1}<b>${done?KEYS[i]:'?'}</b>`;
+    return (done||isCur)&&S.screen!=='win'?`<button class="${cls}" data-go="p${i+1}" aria-label="Ir al sobre ${i+1}">${inner}</button>`:`<div class="${cls}">${inner}</div>`;
+  }).join('');
+  $$('[data-go]',trackEl).forEach(b=>b.onclick=()=>{S.screen=b.dataset.go;render();window.scrollTo({top:0})});
+}
+
+function updateMeters(){
+  let left=TOTAL;
+  if(S.start){const el=Math.floor(((S.end||Date.now())-S.start)/1000);left=Math.max(0,TOTAL-el)}
+  $('#time').textContent=fmt(left);
+  $('#timewrap').className=(S.start&&left===0)?'late':'';
+  $('#hintcount').textContent=S.hints.reduce((a,b)=>a+b,0);
+}
+
+function render(){
+  trackEl.hidden=(S.screen==='intro');
+  renderTrack();updateMeters();
+  const sc=S.screen;
+  app.innerHTML= sc==='intro'?vIntro(): sc==='final'?vFinal(): sc==='win'?vWin(): vPrueba(+sc.slice(1)-1);
+  bind();
+}
+
+/* modo anfitrión: añadir #anfitrion al enlace */
+function hostPanel(){
+  const h=$('#host');
+  if(location.hash!=='#anfitrion'){h.hidden=true;return}
+  h.hidden=false;
+  h.innerHTML='Anfitrión: '+[1,2,3,4,5].map(n=>`<button data-p="${n}">Sobre ${n}</button>`).join('')+'<button data-p="f">Caja fuerte</button><button data-p="r">Reiniciar</button>';
+  $$('button',h).forEach(b=>b.onclick=()=>{
+    const p=b.dataset.p;
+    if(p==='r'){S={screen:'intro',solved:[false,false,false,false,false],hints:[0,0,0,0,0],start:null,end:null,tries:0}}
+    else{const n=p==='f'?5:+p-1;S.solved=S.solved.map((_,k)=>k<n);if(!S.start)S.start=Date.now();S.end=null;S.screen=p==='f'?'final':'p'+(n+1)}
+    render();window.scrollTo({top:0});
+  });
+}
+window.addEventListener('hashchange',hostPanel);
+
+function boot(d){
+  if(d&&d.screen) S=Object.assign(S,d);
+  render();hostPanel();
+  setInterval(updateMeters,1000);
+}
+window.claude?.hot?.snapshot?.(()=>S);
+if(window.claude?.hot?.ready) window.claude.hot.ready(boot); else boot(window.claude?.hot?.data??{});
+</script>
+</body>
+</html>
